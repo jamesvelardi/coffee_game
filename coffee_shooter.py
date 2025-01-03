@@ -46,7 +46,11 @@ FONT = pygame.font.SysFont("comicsans", 30)
 BOSS_IMAGE = pygame.transform.scale(pygame.image.load('coffee_bean.png'), (BOSS_WIDTH, BOSS_HEIGHT))
 
 #Make the graphics for the game
+<<<<<<< HEAD
 def draw(player, elapsed_time, coffees, shots, boss,):
+=======
+def draw(player, elapsed_time, coffees, shots, boss):
+>>>>>>> 2ebe3e0d3fd4e943de9ff367f1db6bdbb72db985
     #Draw the background.
     WIN.blit(BG, (0,0))
 
@@ -135,7 +139,11 @@ def main():
 
     while run:
         #coffee_count becomes 1000 every 60 frames
+<<<<<<< HEAD
         clock.tick(60)
+=======
+        coffee_count += clock.tick(60)
+>>>>>>> 2ebe3e0d3fd4e943de9ff367f1db6bdbb72db985
         
         #Time the game has been running
         elapsed_time = time.time() - start_time
@@ -162,7 +170,11 @@ def main():
             boss = create_boss()
 
             #Crete a boss hitbox to compensate for the fact that the rect object is bigger than the picture
+<<<<<<< HEAD
             boss_hitbox = boss["rect"].inflate(-300,-90)
+=======
+            boss_hitbox = boss["rect"].inflate(-7,-7)
+>>>>>>> 2ebe3e0d3fd4e943de9ff367f1db6bdbb72db985
 
             #Use to move boss downwards when health reaches below half
             boss_half = boss["health"] / 2
@@ -174,7 +186,11 @@ def main():
         #Moves the boss to the left side of the screen    
         if boss and boss["rect"].x - BOSS_VEL >= -150 and move_count == 0:
             boss["rect"].x -= BOSS_VEL
+<<<<<<< HEAD
             boss_hitbox = boss["rect"].inflate(-300,-90)
+=======
+            boss_hitbox = boss["rect"].inflate(-7,-7)
+>>>>>>> 2ebe3e0d3fd4e943de9ff367f1db6bdbb72db985
 
         #Moves the boss to the right side of the screen once the boss reaches the beginning screen width    
         elif boss and boss["rect"].x == -150:
@@ -182,13 +198,21 @@ def main():
             #The boss movement count increases by 1 to prevent boss object from moving left
             move_count = 1
             boss["rect"].x += BOSS_VEL
+<<<<<<< HEAD
             boss_hitbox = boss["rect"].inflate(-300,-90)
+=======
+            boss_hitbox = boss["rect"].inflate(-7,-7)
+>>>>>>> 2ebe3e0d3fd4e943de9ff367f1db6bdbb72db985
 
         #Continues to move the boss to the right side of the screen    
         elif boss and move_count == 1 and boss["rect"].x + BOSS_VEL + BOSS_WIDTH < WIDTH + 150:
 
             boss["rect"].x += BOSS_VEL
+<<<<<<< HEAD
             boss_hitbox = boss["rect"].inflate(-300,-90)
+=======
+            boss_hitbox = boss["rect"].inflate(-7,-7)
+>>>>>>> 2ebe3e0d3fd4e943de9ff367f1db6bdbb72db985
 
         #Moves the boss to the left again once the boss's x movement goes past the screen-width size    
         elif boss and boss["rect"].x + BOSS_VEL + BOSS_WIDTH == WIDTH + 150:
@@ -203,7 +227,11 @@ def main():
             move_count = 2
             
             boss["rect"].y += BOSS_VEL
+<<<<<<< HEAD
             boss_hitbox = boss["rect"].inflate(-300,-90)
+=======
+            boss_hitbox = boss["rect"].inflate(-7,-7)
+>>>>>>> 2ebe3e0d3fd4e943de9ff367f1db6bdbb72db985
 
         #Logic to revert back to regular horizontal movement
         elif boss and boss['rect'].y + BOSS_HEIGHT == HEIGHT and boss["rect"].x < WIDTH + 150 and move_count !=1:
