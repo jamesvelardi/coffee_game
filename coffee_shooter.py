@@ -28,7 +28,7 @@ PLAYER_HEIGHT = 70
 PLAYER_VEL = 10
 SHOT_WIDTH = 40
 SHOT_HEIGHT = 40
-SHOT_VEL = 5
+SHOT_VEL = 7.5
 COFFEE_WIDTH = 50
 COFFEE_HEIGHT = 50
 COFFEE_VEL = 3
@@ -92,8 +92,11 @@ def create_coffee():
 
 def create_boss(defeated_boss, speed):
 
+    #Random X-location for boss
+    boss_x = random.randrange(0, WIDTH - BOSS_WIDTH, 10)
+
     #Location and size of the boss object
-    boss_rect = pygame.Rect(150, 100, BOSS_WIDTH, BOSS_HEIGHT)
+    boss_rect = pygame.Rect(boss_x, 100, BOSS_WIDTH, BOSS_HEIGHT)
 
     #Beginning boss value
     if defeated_boss == 0:
@@ -101,9 +104,13 @@ def create_boss(defeated_boss, speed):
         #Return a dictionary to use for object collision and to track boss health
         return {"rect": boss_rect, "health": 10, "boss_vel": speed}
 
-    #Double bosses health and speed every iteration
-    elif defeated_boss > 0:
-        return {"rect": boss_rect, "health": (defeated_boss +1) * 10, "boss_vel": speed * defeated_boss}
+    #Increase boss's health by the bosses defeated and increase boss's speed by 1.5 times for the 2nd and 3rd boss
+    elif 0 < defeated_boss <=3:
+        return {"rect": boss_rect, "health": (defeated_boss +1) * 10, "boss_vel": speed * 1.5}
+
+    #Increase boss's health by the bosses defeated and increase boss's speed by 2 times for the 4th and final boss
+    else:
+        return {"rect": boss_rect, "health": (defeated_boss +1) * 10, "boss_vel": speed * 2}
 
 
 def main():
@@ -119,7 +126,7 @@ def main():
     #Initialize elapsed_time
     elapsed_time = 0
 
-    #This number equates to 2 seconds when using the clock.tick function.
+    #This number equates to 4 seconds when using the clock.tick function.
     coffee_add_increment = 2000
 
     #Coffee count
@@ -153,18 +160,20 @@ def main():
     move_count = 0
 
     #Boss attack count used to delay attack
-
     last_attack = 0
 
     #Boss attack delay count
-
     delay_attack = 0.10
 
     #Initialize for boss moving downwards
     down = 0
 
-    #Random X-location for boss
-    boss_x = random.randrange(0, WIDTH - BOSS_WIDTH, 10)
+    #Used for random x movement of boss
+    boss_x_count = 0
+
+    #Assign a random location on the screen to use to move boss upwards later
+    x_location = random.randrange(0, WIDTH - BOSS_WIDTH)
+
 
     while run:
         #coffee_count becomes 1000 every 60 frames
@@ -183,13 +192,16 @@ def main():
                 coffees.append(create_coffee())
 
             #Decreases original by 50 after every iteration with 200 being the lowest possible value.
-            coffee_add_increment = max(200, coffee_add_increment - 50)
+            coffee_add_increment = max(800, coffee_add_increment - 50)
 
             #Returns coffee_count to 0 after every iteration.
             coffee_count = 0
 
         #Create the boss.   
-        if elapsed_time > 1 and boss is None and boss_count == 0:
+        if elapsed_time > 15 and boss is None and boss_count == 0:
+
+            #Reset the down counter for downwards mobility later on
+            down = 0
 
             #Run the create_boss function and store in a variable for later use
             boss = create_boss(defeated_boss, BOSS_VEL)
@@ -201,9 +213,9 @@ def main():
             boss_half = boss["health"] / 2
 
         #Create up to 5 new bosses once conditions are met    
-        if 0 < defeated_boss <= 5 and boss is None and elapsed_time / defeated_boss >= 10: 
+        if 0 < defeated_boss <= 5 and boss is None and elapsed_time / defeated_boss >= 30: 
 
-            #Track the amount of bosses
+            #Counter used to prevent boss from spawning immediately
             boss_count = 0
 
         #Moves the boss to the left side of the screen    
@@ -216,11 +228,14 @@ def main():
             boss_hitbox = boss["rect"].inflate(-300,-90)
 
         #Moves the boss to the right side of the screen once the boss reaches the beginning screen width    
-        elif boss and boss["rect"].x <= -150:
+        elif boss and boss["rect"].x - BOSS_VEL <= -150:
+
+            #Used to move boss upwards only when count reaches a certain number
+            boss_x_count += 1
 
             #The boss movement count increases by 1 to prevent boss object from moving left
             move_count = 1
-
+ 
             #Move boss to the right
             boss["rect"].x += boss["boss_vel"]
 
@@ -239,11 +254,18 @@ def main():
         #Moves the boss to the left again once the boss's x movement goes past the screen-width size    
         elif boss and boss["rect"].x + BOSS_VEL + BOSS_WIDTH >= WIDTH + 150:
 
+            #Accumulates when the boss hits the left side of the screen
+            boss_x_count += 1
+
             #The boss movement count adjusts back to 0 to run the if condition for left movement
             move_count = 0
             
         #Logic to move the boss downwards toward the player
         if boss and boss["health"] <= boss_half and boss['rect'].y + BOSS_HEIGHT <= HEIGHT and down == 0:
+            
+            #Reset count to use to move boss upwards later
+            boss_x_count = 0
+
             #Move_count increased to 2 in order to avoid the boss moving left or right
             move_count = 2
             
@@ -254,7 +276,7 @@ def main():
             boss_hitbox = boss["rect"].inflate(-300,-90)
 
         #Logic to revert back to regular horizontal movement
-        elif boss and boss['rect'].y + BOSS_HEIGHT >= HEIGHT and boss["rect"].x <= WIDTH + 150 and move_count !=1 and boss["rect"].x != boss_x:
+        elif boss and boss['rect'].y + BOSS_HEIGHT >= HEIGHT and boss["rect"].x <= WIDTH + 150 and move_count == 2:
 
             #Down increased to 1 as soon as the boss hits the bottom
             down = 1
@@ -266,32 +288,30 @@ def main():
             boss_hitbox = boss["rect"].inflate(-300,-90)
 
         #Logic to start moving the boss upwards once the boss hits a random x-axis.
-        elif boss and boss["rect"].y + BOSS_HEIGHT >= HEIGHT and boss["rect"].x == boss_x:
+        elif boss and boss["rect"].y >= 100 and down == 1 and boss_x_count > 2:
 
-            #Move count to prevent horizontal movement while moving upwards
-            move_count = 2
-
-            #Begin to move the boss upwards
-            boss["rect"].y -= boss["boss_vel"]
-
-            #Move the hitbox upon each frame with the boss
-            boss_hitbox = boss["rect"].inflate(-300,-90)
-
-        #Move boss upwards until the boss reaches a certain point on the y-axis
-        elif boss and boss["rect"].y >= 100 and boss["rect"].x == boss_x and down == 1:
-            
             #Once the boss reaches the original spawn point, revert back to regular horizontal movement
             if boss["rect"].y <= 100:
                 
                 #Used to revert back to leftwards movement
                 move_count = 0
 
-                #Counter set to 2 to avoid triggering the other if/else blocks using the random boss_x variable
+                #Counter set to 2 to avoid upwards and downwards movement
                 down = 2
 
-            else:
+                #Reset boss_x_count to get next generated boss to move up
+                boss_x_count = 0
 
-                #Move boss upwards
+            #Condition that checks if the boss is within a random rect.x location assigned
+            elif boss["rect"].x <= x_location + boss["boss_vel"] and boss["rect"].x >= x_location - boss["boss_vel"]:
+
+                #Ensure that the boss moves up
+                boss["rect"].x = x_location
+
+                #Move count to prevent horizontal movement while moving upwards
+                move_count = 2
+
+                #Begin to move the boss upwards
                 boss["rect"].y -= boss["boss_vel"]
 
                 #Move the hitbox upon each frame with the boss
@@ -307,7 +327,7 @@ def main():
             if current_time - last_attack >= delay_attack:
 
                 #Spawn the boss projectile
-                boss_attack = pygame.Rect(boss["rect"].x + boss["rect"].width // 2 - SHOT_WIDTH // 2, boss["rect"].y, SHOT_WIDTH, SHOT_HEIGHT)
+                boss_attack = pygame.Rect(boss["rect"].x + boss["rect"].width // 2 - SHOT_WIDTH // 2, boss["rect"].y + 130, SHOT_WIDTH, SHOT_HEIGHT)
 
                 #Logic to limit boss attack on the screen and only attack when the boss is in a certain vertical position
                 if len(boss_shots) < 15 and boss["rect"].y == 100:
@@ -322,7 +342,7 @@ def main():
             for boss_attack in boss_shots[:]:
 
             #Attack moves downwards each iteration
-                boss_attack.y += SHOT_VEL
+                boss_attack.y += 10
 
             #Removes the attack from the boss_attack list everytime the attack goes off-screen
                 if boss_attack.y + SHOT_HEIGHT > HEIGHT:
@@ -364,17 +384,22 @@ def main():
         #Shoot button   
         if keys[pygame.K_SPACE]:
             
+            #Boolean used to regulate projectile frequency
             if not space_bar:
+
             #Create the object for the player to shoot
                 shot = pygame.Rect(player.x + player.width // 2 - SHOT_WIDTH // 2, player.y, SHOT_WIDTH, SHOT_HEIGHT)
 
             #Maximum number of shots possible to have on screen at a time
                 if len(shots) < 50:
 
-                    #Add new shots each time the spacebar is hit
+                    #Add new shots each time the spacebar key is hit
                     shots.append(shot)
 
+                #Used to ensure shots only get fired when the space bar is hit
                 space_bar = True
+
+        #Boolean set back to default condition when the spacebar key is not hit        
         else:
             space_bar = False
 
@@ -390,17 +415,31 @@ def main():
 
             #Boss health goes down when a shot hits    
             elif boss and shot.colliderect(boss["rect"]):
+
+                #Lower boss's health when player's projectile hits
                 boss["health"] -= 1
+
+                #Remove player's projectile to manage memory
                 shots.remove(shot)
 
                 #Remove the boss once health hits 0
                 if boss and boss["health"] <= 0:
+
+                    #Despawn boss upon defeat
                     boss = None
 
                     #Increase the boss count to prevent the create_boss() function to run
                     boss_count += 1
+
+                    #Defeated boss counter used to run different if/else block in the create_boss() function
                     defeated_boss += 1
+
+                    #Reset boss movement for the next create_boss iteration
                     move_count = 0
+
+                    #Reset boss_shots to zero to prevent boss_shots from being spawned when another boss gets created
+                    boss_shots = []
+
                     break
                 
                 
@@ -412,20 +451,32 @@ def main():
                 #and to avoid skipping iterations after deleting a boss attack
                 for boss_attack in boss_shots[:]:
                     
+                    #If player shots hit boss's projectiles, do the following
                     if shot.colliderect(boss_attack):
+
+                        #Despawn boss and player's projectiles to manage memory
                         boss_shots.remove(boss_attack)
                         shots.remove(shot)
+
+                        #End loop once target is destroyed to avoid looping errors
                         break
 
                 #Run a for loop on a copy of the coffees list to avoid RunTimeErrors
                 #and to avoid skipping iterations after deleting coffee bean
                 for coffee in coffees[:]:
-
+                    
+                    #If the player's shot hits the target, do the following
                     if shot.colliderect(coffee["rect"]):
+
+                        #Subtract health from the target, then despawn player projectile to manage memory
                         coffee["health"] -= 1
                         shots.remove(shot)
+
+                        #Despawn target once count hits zero
                         if coffee["health"] <= 0:
                             coffees.remove(coffee)
+
+                        #End loop once target is destroyed to avoid looping errors    
                         break
         
 
