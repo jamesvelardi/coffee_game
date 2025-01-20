@@ -47,12 +47,16 @@ BOSS_IMAGE = pygame.transform.scale(pygame.image.load('coffee_bean.png'), (BOSS_
 BOSS_SHOT = pygame.transform.scale(pygame.image.load('boss_shot.png'), (SHOT_WIDTH, SHOT_HEIGHT))
 
 #Make the graphics for the game
-def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar, lives):
+def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar, lives, score):
     #Draw the background.
     WIN.blit(BG, (0,0))
 
     #Text for in-game timer
     time_text = FONT.render(f"Time: {round(elapsed_time)}s", 1, "green")
+
+    score_text = FONT.render(f"Score: {round(score)}", 1, "green")
+
+    WIN.blit(score_text, (400, 10))
 
     WIN.blit(time_text, (10,10))
     
@@ -82,9 +86,11 @@ def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar
     for coffee in coffees:
         WIN.blit(COFFEE_IMAGE, (coffee.x, coffee.y))
 
+    #Draw the lives on the screen
     for live in lives:
         WIN.blit(PLAYER_IMAGE, (live.x, live.y))
     
+    #Display the program on the window
     pygame.display.update()
 
 #Create the falling objects to destroy.
@@ -99,6 +105,7 @@ def create_coffee():
     #Return a dictionary to use for object collision and to track health of the falling object
     return {"rect": coffee_rect, "health": 1}
 
+#Create the boss object
 def create_boss(defeated_boss, speed):
 
     #Random X-location for boss
@@ -206,6 +213,13 @@ def main():
             pygame.Rect(720, 10, PLAYER_WIDTH, PLAYER_HEIGHT),
             pygame.Rect(790, 10, PLAYER_WIDTH, PLAYER_HEIGHT)]
 
+    #Initialize player's score
+    score = 0
+
+    last_boss_spawned = 0
+
+    boss_delay = 3
+
     while run:
         #coffee_count becomes 1000 every 60 frames
         coffee_count += clock.tick(60)
@@ -229,7 +243,7 @@ def main():
             coffee_count = 0
 
         #Create the boss.   
-        if elapsed_time > 1 and boss is None and boss_count == 0:
+        if elapsed_time > 15 and boss is None and boss_count == 0:
 
             #Reset the down counter for downwards mobility later on
             down = 0
@@ -254,8 +268,12 @@ def main():
         #Create up to 5 new bosses once conditions are met    
         if 0 < defeated_boss <= 5 and boss is None and elapsed_time / defeated_boss >= 30: 
 
-            #Counter used to spawn boss once conditions are met
-            boss_count = 0
+            boss_spawn_delay = time.time()
+
+            if boss_spawn_delay - last_boss_spawned >= boss_delay:
+
+                #Counter used to spawn boss once conditions are met
+                boss_count = 0
 
         #Moves the boss to the left side of the screen    
         if boss and boss["rect"].x - BOSS_VEL >= -150 and move_count == 0:
@@ -387,7 +405,7 @@ def main():
                 if boss_attack.y + SHOT_HEIGHT > HEIGHT:
                     boss_shots.remove(boss_attack)
 
-                #If the boss object hits the player, end the game
+                #If the boss object hits the player, do the following
                 elif boss_attack.colliderect(player):
                     
                     #Code block to activate player i-frame upon being hit by boss projectile
@@ -424,8 +442,11 @@ def main():
                     # Pause the game
                     paused = True
 
+                    #Pause text to display on the screen while paused
                     pause_text = FONT.render("Paused", 1, "green")
                     WIN.blit(pause_text, (WIDTH/2 - pause_text.get_width()/2, HEIGHT/2 - pause_text.get_height()/2))
+
+                    #Display the pause text on the screen
                     pygame.display.update()
                     
                     #Check again to see if k is pressed to unpause the game
@@ -534,6 +555,10 @@ def main():
                     #Reset boss_shots to zero to prevent boss_shots from being spawned when another boss gets created
                     boss_shots = []
 
+                    #Increase score each time boss gets defeated
+                    score += 100 * (defeated_boss + 1)
+
+                    #Break the loop upon boss defeat
                     break
                 
                 
@@ -584,8 +609,11 @@ def main():
 
                         #Despawn target once count hits zero
                         if coffee["health"] <= 0:
-
+                            
                             coffees.remove(coffee)
+
+                            #Increase score by 10 each time a coffee bean is destoryed
+                            score += 10
 
                         #End loop once target is destroyed to avoid looping errors    
                         break
@@ -649,14 +677,16 @@ def main():
         if hit:
 
             #Print the end game text
-            lost_text = FONT.render("YOU LOSE! GOOD DAY SIR!", 1, "green")
-            WIN.blit(lost_text, (WIDTH/2 - lost_text.get_width()/2, HEIGHT/2 - lost_text.get_height()/2))
+            lost_text = FONT.render("GAME OVER!", 1, "green")
+            final_score = FONT.render(f"FINAL SCORE: {score}", 1, "green")
+            WIN.blit(lost_text, (WIDTH/2 - lost_text.get_width()/2, HEIGHT/2 - lost_text.get_height()/2 - 20))
+            WIN.blit(final_score, (WIDTH/2 - final_score.get_width()/2, HEIGHT/2 - final_score.get_height()/2 + lost_text.get_height()/2))
             pygame.display.update()
             pygame.time.delay(4000)
             break
 
         #Draw the game.    
-        draw(player, elapsed_time, [coffee["rect"] for coffee in coffees], shots, boss["rect"] if boss else pygame.Rect(0, 0, 0, 0), boss_shots, boss_health if boss else pygame.Rect(0,0,0,0), lives)
+        draw(player, elapsed_time, [coffee["rect"] for coffee in coffees], shots, boss["rect"] if boss else pygame.Rect(0, 0, 0, 0), boss_shots, boss_health if boss else pygame.Rect(0,0,0,0), lives, score)
         
 
     pygame.quit()
