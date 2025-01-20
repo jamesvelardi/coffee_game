@@ -46,7 +46,7 @@ BOSS_IMAGE = pygame.transform.scale(pygame.image.load('coffee_bean.png'), (BOSS_
 BOSS_SHOT = pygame.transform.scale(pygame.image.load('boss_shot.png'), (SHOT_WIDTH, SHOT_HEIGHT))
 
 #Make the graphics for the game
-def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar):
+def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar, lives):
     #Draw the background.
     WIN.blit(BG, (0,0))
 
@@ -80,6 +80,9 @@ def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar
     #Draw the coffee beans 
     for coffee in coffees:
         WIN.blit(COFFEE_IMAGE, (coffee.x, coffee.y))
+
+    for live in lives:
+        WIN.blit(PLAYER_IMAGE, (live.x, live.y))
     
     pygame.display.update()
 
@@ -182,10 +185,29 @@ def main():
     #Assign a random location on the screen to use to move boss upwards later
     x_location = random.randrange(0, WIDTH - BOSS_WIDTH)
 
+    #Player Health
+    player_health = 3
+
+    #Player i-frame timing for boss initialized for time.time() function
+    boss_hitting_player_iframe = 0
+
+    #Player i-frame
+    damage_delay = 0.30
+
+    #Player i-frame timing for boss attack hitting player initialized for time.time() function
+    boss_attack_hitting_player_iframe = 0
+
+    #Player i-frame timing for coffee bean projectile hitting player initialized for time.time() function
+    coffee_bean_hitting_player_iframe = 0
+
+    #Player lives on screen
+    lives = [pygame.Rect(650, 10, PLAYER_WIDTH, PLAYER_HEIGHT),
+            pygame.Rect(720, 10, PLAYER_WIDTH, PLAYER_HEIGHT),
+            pygame.Rect(790, 10, PLAYER_WIDTH, PLAYER_HEIGHT)]
 
     while run:
         #coffee_count becomes 1000 every 60 frames
-        coffee_count += clock.tick(60)
+        coffee_count +=clock.tick(60)
         
         #Time the game has been running
         elapsed_time = time.time() - start_time
@@ -206,7 +228,7 @@ def main():
             coffee_count = 0
 
         #Create the boss.   
-        if elapsed_time > 15 and boss is None and boss_count == 0:
+        if elapsed_time > 1 and boss is None and boss_count == 0:
 
             #Reset the down counter for downwards mobility later on
             down = 0
@@ -231,7 +253,7 @@ def main():
         #Create up to 5 new bosses once conditions are met    
         if 0 < defeated_boss <= 5 and boss is None and elapsed_time / defeated_boss >= 30: 
 
-            #Counter used to prevent boss from spawning immediately
+            #Counter used to spawn boss once conditions are met
             boss_count = 0
 
         #Moves the boss to the left side of the screen    
@@ -366,11 +388,26 @@ def main():
 
                 #If the boss object hits the player, end the game
                 elif boss_attack.colliderect(player):
-                        hit = True
+                    
+                    #Code block to activate player i-frame upon being hit by boss projectile
+                    boss_attack_time = time.time()
 
-                        break
+                    if boss_attack_time - boss_attack_hitting_player_iframe >= damage_delay:
 
+                        player_health -= 1
 
+                        #Remove lives from the screen after being hit
+                        lives.pop()
+
+                        boss_shots.remove(boss_attack)
+
+                    boss_attack_hitting_player_iframe = boss_attack_time
+
+                elif player_health <= 0:
+
+                    hit = True
+
+                    break
 
         #Add a quit option for the game. 
         for event in pygame.event.get():
@@ -460,7 +497,7 @@ def main():
                     #Despawn boss upon defeat
                     boss = None
 
-                    #Increase the boss count to prevent the create_boss() function to run
+                    #Increase the boss count to prevent the create_boss() function to run immediately
                     boss_count += 1
 
                     #Defeated boss counter used to run different if/else block in the create_boss() function
@@ -542,12 +579,43 @@ def main():
 
             #Set the collision for the player hitting the coffee bean  
             elif coffee["rect"].colliderect(player):
-                coffees.remove(coffee)
+                
+                #Code block for player i-frame on falling projectil hitting player
+                coffee_time = time.time()
+                
+                if coffee_time - coffee_bean_hitting_player_iframe >= damage_delay:
+
+
+                    player_health -= 1
+
+                    #Remove live from the screen after being hit
+                    lives.pop()
+
+                    coffees.remove(coffee)
+                
+                coffee_bean_hitting_player_iframe = coffee_time
+
+            elif player_health <= 0:
+
                 hit = True
                 break
 
         #Use the boss hitbox to detect collision with the player
         if boss and boss_hitbox.colliderect(player):
+
+            #Code block to set up the player's i-frame for when the player hit's the boss's body
+            boss_hits = time.time()
+
+            if boss_hits - boss_hitting_player_iframe >= damage_delay:
+
+                player_health -= 1
+
+                #Remove live from the screen after being hit
+                lives.pop()
+            
+            boss_hitting_player_iframe = boss_hits
+
+        elif player_health <= 0:
 
             #End the game if the boss hits the player
             hit = True
@@ -563,8 +631,8 @@ def main():
             break
 
         #Draw the game.    
-        draw(player, elapsed_time, [coffee["rect"] for coffee in coffees], shots, boss["rect"] if boss else pygame.Rect(0, 0, 0, 0), boss_shots, boss_health if boss else pygame.Rect(0,0,0,0))
-
+        draw(player, elapsed_time, [coffee["rect"] for coffee in coffees], shots, boss["rect"] if boss else pygame.Rect(0, 0, 0, 0), boss_shots, boss_health if boss else pygame.Rect(0,0,0,0), lives)
+        
 
     pygame.quit()
 
