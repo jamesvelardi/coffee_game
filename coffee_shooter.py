@@ -46,7 +46,7 @@ BOSS_IMAGE = pygame.transform.scale(pygame.image.load('coffee_bean.png'), (BOSS_
 BOSS_SHOT = pygame.transform.scale(pygame.image.load('boss_shot.png'), (SHOT_WIDTH, SHOT_HEIGHT))
 
 #Make the graphics for the game
-def draw(player, elapsed_time, coffees, shots, boss, boss_shots):
+def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar):
     #Draw the background.
     WIN.blit(BG, (0,0))
 
@@ -60,8 +60,13 @@ def draw(player, elapsed_time, coffees, shots, boss, boss_shots):
 
     #Draw the boss
     if boss:
+
         WIN.blit(BOSS_IMAGE, (boss.x, boss.y))
 
+        #Draw the boss's health bar
+        pygame.draw.rect(WIN, "red", boss_health_bar)
+
+        #Draw the boss projectiles
         for boss_attack in boss_shots:
 
             WIN.blit(BOSS_SHOT, (boss_attack.x, boss_attack.y))
@@ -102,15 +107,15 @@ def create_boss(defeated_boss, speed):
     if defeated_boss == 0:
 
         #Return a dictionary to use for object collision and to track boss health
-        return {"rect": boss_rect, "health": 10, "boss_vel": speed}
+        return {"rect": boss_rect, "health": 50, "boss_vel": speed}
 
     #Increase boss's health by the bosses defeated and increase boss's speed by 1.5 times for the 2nd and 3rd boss
     elif 0 < defeated_boss <=3:
-        return {"rect": boss_rect, "health": (defeated_boss +1) * 10, "boss_vel": speed * 1.5}
+        return {"rect": boss_rect, "health": (defeated_boss +1) * 50, "boss_vel": speed * 1.5}
 
     #Increase boss's health by the bosses defeated and increase boss's speed by 2 times for the 4th and final boss
     else:
-        return {"rect": boss_rect, "health": (defeated_boss +1) * 10, "boss_vel": speed * 2}
+        return {"rect": boss_rect, "health": (defeated_boss +1) * 50, "boss_vel": speed * 2}
 
 
 def main():
@@ -144,9 +149,6 @@ def main():
     #Boolean used to end the game if the player gets hit
     hit = False
 
-    #Boolean for space bar hit
-    space_bar = False
-
     #Initialize boss before being created
     boss = None
 
@@ -159,11 +161,17 @@ def main():
     #Boss movement counter used to regulate movement
     move_count = 0
 
-    #Boss attack count used to delay attack
+    #Boss attack count initialized to 0 to use later on for projectile spawning
     last_attack = 0
 
     #Boss attack delay count
     delay_attack = 0.10
+
+    #Player attack delay count
+    player_attack_delay = 0.07
+
+    #Player projectile count initialized to 0 to use later on for player's projectile spawning
+    shot_attack = 0
 
     #Initialize for boss moving downwards
     down = 0
@@ -192,7 +200,7 @@ def main():
                 coffees.append(create_coffee())
 
             #Decreases original by 50 after every iteration with 200 being the lowest possible value.
-            coffee_add_increment = max(800, coffee_add_increment - 50)
+            coffee_add_increment = max(400, coffee_add_increment - 50)
 
             #Returns coffee_count to 0 after every iteration.
             coffee_count = 0
@@ -205,6 +213,14 @@ def main():
 
             #Run the create_boss function and store in a variable for later use
             boss = create_boss(defeated_boss, BOSS_VEL)
+
+            if boss:
+
+                #Create the boss's health bar
+                boss_health = pygame.Rect(WIDTH / 4, 20, 400, 20)
+
+                #Used to dynamically change boss's health bar upon each hit
+                full_health = boss["health"]
 
             #Crete a boss hitbox to compensate for the fact that the rect object is bigger than the picture
             boss_hitbox = boss["rect"].inflate(-300,-90)
@@ -384,24 +400,24 @@ def main():
         #Shoot button   
         if keys[pygame.K_SPACE]:
             
-            #Boolean used to regulate projectile frequency
-            if not space_bar:
+            #Track current time to use for regulating player projectile frequency
+            shot_time = time.time()
+
+            #Used the current time minus the last shot that spawned if greater than spawn delay
+            if shot_time - shot_attack >= player_attack_delay:
+
 
             #Create the object for the player to shoot
                 shot = pygame.Rect(player.x + player.width // 2 - SHOT_WIDTH // 2, player.y, SHOT_WIDTH, SHOT_HEIGHT)
 
             #Maximum number of shots possible to have on screen at a time
-                if len(shots) < 50:
+                if len(shots) < 25:
 
                     #Add new shots each time the spacebar key is hit
                     shots.append(shot)
-
-                #Used to ensure shots only get fired when the space bar is hit
-                space_bar = True
-
-        #Boolean set back to default condition when the spacebar key is not hit        
-        else:
-            space_bar = False
+                
+                #Re-initialze shot_attack to the time the last player projectile spawned
+                shot_attack = shot_time
 
         #Create a for-loop of a copy of the shots list to track the shots shown on screen and to check for collisions      
         for shot in shots[:]:
@@ -419,8 +435,24 @@ def main():
                 #Lower boss's health when player's projectile hits
                 boss["health"] -= 1
 
-                #Remove player's projectile to manage memory
-                shots.remove(shot)
+                #Try block used to avoid a ZeroDivisionError when boss's health hits zero
+                try:
+                    
+                    #Lower bosses health graphic each time boss is hit
+                    boss_health.width -= 250 / full_health
+
+                #When boss's health reaches zero, keep running the program
+                except ZeroDivisionError:
+                    continue
+
+                #Exception handling added just in case player projectile hits multiple objects at once
+                try:
+
+                    #Remove player's projectile to manage memory
+                    shots.remove(shot)
+
+                except ValueError:
+                    continue
 
                 #Remove the boss once health hits 0
                 if boss and boss["health"] <= 0:
@@ -456,7 +488,15 @@ def main():
 
                         #Despawn boss and player's projectiles to manage memory
                         boss_shots.remove(boss_attack)
-                        shots.remove(shot)
+
+                        #Exception handling added just in case player projectile hits multiple objects at once
+                        try:
+
+                            #Remove player's projectile to manage memory
+                            shots.remove(shot)
+
+                        except ValueError:
+                            continue
 
                         #End loop once target is destroyed to avoid looping errors
                         break
@@ -470,10 +510,19 @@ def main():
 
                         #Subtract health from the target, then despawn player projectile to manage memory
                         coffee["health"] -= 1
-                        shots.remove(shot)
+
+                        #Exception handling added just in case player projectile hits multiple objects at once
+                        try:
+
+                            #Remove player's projectile to manage memory
+                            shots.remove(shot)
+
+                        except ValueError:
+                            continue
 
                         #Despawn target once count hits zero
                         if coffee["health"] <= 0:
+
                             coffees.remove(coffee)
 
                         #End loop once target is destroyed to avoid looping errors    
@@ -514,7 +563,7 @@ def main():
             break
 
         #Draw the game.    
-        draw(player, elapsed_time, [coffee["rect"] for coffee in coffees], shots, boss["rect"] if boss else pygame.Rect(0, 0, 0, 0), boss_shots)
+        draw(player, elapsed_time, [coffee["rect"] for coffee in coffees], shots, boss["rect"] if boss else pygame.Rect(0, 0, 0, 0), boss_shots, boss_health if boss else pygame.Rect(0,0,0,0))
 
 
     pygame.quit()
