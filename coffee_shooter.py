@@ -18,6 +18,7 @@ pygame.display.set_caption("Coffee Shooter")
 #Game Background
 BG = pygame.transform.scale(pygame.image.load('gameBackground.png'), (WIDTH, HEIGHT))
 
+#Variable used to establish frame rate while the game is running
 clock = pygame.time.Clock()
 
 
@@ -51,7 +52,7 @@ def draw(player, elapsed_time, coffees, shots, boss, boss_shots, boss_health_bar
     WIN.blit(BG, (0,0))
 
     #Text for in-game timer
-    time_text = FONT.render(f"Time: {round(elapsed_time)}s", 1, "white")
+    time_text = FONT.render(f"Time: {round(elapsed_time)}s", 1, "green")
 
     WIN.blit(time_text, (10,10))
     
@@ -207,7 +208,7 @@ def main():
 
     while run:
         #coffee_count becomes 1000 every 60 frames
-        coffee_count +=clock.tick(60)
+        coffee_count += clock.tick(60)
         
         #Time the game has been running
         elapsed_time = time.time() - start_time
@@ -222,7 +223,7 @@ def main():
                 coffees.append(create_coffee())
 
             #Decreases original by 50 after every iteration with 200 being the lowest possible value.
-            coffee_add_increment = max(400, coffee_add_increment - 50)
+            coffee_add_increment = max(700, coffee_add_increment - 50)
 
             #Returns coffee_count to 0 after every iteration.
             coffee_count = 0
@@ -239,7 +240,7 @@ def main():
             if boss:
 
                 #Create the boss's health bar
-                boss_health = pygame.Rect(WIDTH / 4, 20, 400, 20)
+                boss_health = pygame.Rect(WIDTH / 4, 60, 400, 20)
 
                 #Used to dynamically change boss's health bar upon each hit
                 full_health = boss["health"]
@@ -414,7 +415,31 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
                 break
-            
+
+            #Add pause functionaility to the game
+            if event.type == pygame.KEYDOWN:
+
+                #If k on the keyboard is hit, pause the game
+                if event.key == pygame.K_k:
+                    # Pause the game
+                    paused = True
+
+                    pause_text = FONT.render("Paused", 1, "green")
+                    WIN.blit(pause_text, (WIDTH/2 - pause_text.get_width()/2, HEIGHT/2 - pause_text.get_height()/2))
+                    pygame.display.update()
+                    
+                    #Check again to see if k is pressed to unpause the game
+                    while paused:
+                        for event in pygame.event.get():
+                            if event.type == pygame.KEYDOWN:
+                                if event.key == pygame.K_k:
+                                    paused = False
+
+                            #Added the quit option again to be able to exit the game while the game is paused
+                            elif event.type == pygame.QUIT:
+                                paused = False
+                                run = False
+                                break
         #Player controls.    
         keys  = pygame.key.get_pressed()
 
@@ -624,7 +649,7 @@ def main():
         if hit:
 
             #Print the end game text
-            lost_text = FONT.render("YOU LOSE! GOOD DAY SIR!", 1, "white")
+            lost_text = FONT.render("YOU LOSE! GOOD DAY SIR!", 1, "green")
             WIN.blit(lost_text, (WIDTH/2 - lost_text.get_width()/2, HEIGHT/2 - lost_text.get_height()/2))
             pygame.display.update()
             pygame.time.delay(4000)
